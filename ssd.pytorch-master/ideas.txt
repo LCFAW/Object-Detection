@@ -1,0 +1,11 @@
+将vgg输出的特征图送到transformer中（加点注意力），然后concat到之后的某个extras层上
+
+将extras和vgg输出的特征图aggregate在一起，然后进行统一的一预测（缺少了multi scale的信息）
+
+将VGG和extras看作一个整体（backbone），从其中选取几个feature map构建FPN，另外，将原始的输入尺寸改
+为512，因为数据集中多为小目标，需要分辨率更高的feature　map
+
+加上deformable convulsion 可能可以涨点
+
+DEBUG:
+有几个卷积层的参数没有经过初始化
