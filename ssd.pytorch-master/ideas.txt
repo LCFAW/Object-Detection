@@ -9,3 +9,10 @@
 
 DEBUG:
 有几个卷积层的参数没有经过初始化
+
+
+875:  alpha:0.75  beta:1.25
+
+865:  alpha:1  beta:1   8 6 4
+
+856:  alpha:1  beta:1   8 4 2

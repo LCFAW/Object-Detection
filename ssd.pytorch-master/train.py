@@ -1,7 +1,7 @@
 from data import *
 from utils.augmentations import SSDAugmentation
+import matplotlib.pyplot as plt
 from layers.modules import MultiBoxLoss
-from ssd_fpns import build_ssd
 import os
 import sys
 import time
@@ -16,7 +16,7 @@ import torch.nn.init as init
 import torch.utils.data as data
 import numpy as np
 import argparse
-
+from ssd import build_ssd
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -33,9 +33,9 @@ parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
 parser.add_argument('--batch_size', default=40, type=int,
                     help='Batch size for training')
-parser.add_argument('--alpha', default=0.75,
+parser.add_argument('--alpha', default=1,
                     help='loc_loss')
-parser.add_argument('--beta', default=1.25,
+parser.add_argument('--beta', default=1,
                     help='conf_loss')
 parser.add_argument('--resume', default=None, type=str,
                     help='Checkpoint state_dict file to resume training from')
@@ -109,6 +109,7 @@ def train():
 
     ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
     net = ssd_net
+    metrics_logger = MetricsLogger()
 
     if args.cuda:
         net = torch.nn.DataParallel(ssd_net)
@@ -132,7 +133,7 @@ def train():
         ssd_net.extras.apply(weights_init)
         ssd_net.loc.apply(weights_init)
         ssd_net.conf.apply(weights_init)
-        ssd_net.fpn.apply(weights_init)
+        # ssd_net.fpn.apply(weights_init)
 
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum,
                           weight_decay=args.weight_decay)
@@ -207,7 +208,10 @@ def train():
         loc_loss += loss_l.item()
         conf_loss += loss_c.item()
 
+        
+
         if iteration % 10 == 0:
+            metrics_logger.on_train_epoch_end(iteration, {'loss': loss})
             print('timer: %.4f sec.' % (t1 - t0))
             print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.item()), end=' ')
 
@@ -219,8 +223,9 @@ def train():
             print('Saving state, iter:', iteration)
             torch.save(ssd_net.state_dict(), '/home/zhaojiankuo/ssd.pytorch-master/weights/Trail_knots' +
                        repr(iteration) + '.pth')
-    torch.save(ssd_net.state_dict(),
-               args.save_folder + '' + args.dataset + '.pth')
+    torch.save(ssd_net.state_dict(), args.save_folder + '' + args.dataset + '.pth')
+
+    plot_and_save_curves(metrics_logger, '/home/zhaojiankuo/ssd.pytorch-master/loss_curve')
 
 
 def adjust_learning_rate(optimizer, gamma, step):
@@ -274,6 +279,31 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
             update=True
         )
 
+class MetricsLogger:
+    def __init__(self):
+        self.train_loss_history = []
+        self.val_performance_history = []
+
+    def on_train_epoch_end(self, epoch, logs=None):
+        self.train_loss_history.append(logs['loss'])
+        # self.val_performance_history.append(logs['val_performance'])
+
+
+def plot_and_save_curves(metrics_logger, save_dir):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, len(metrics_logger.train_loss_history) + 1), 
+             metrics_logger.train_loss_history, label='Training Loss')
+    plt.xlabel('Iterations')
+    plt.ylabel('Loss')
+    plt.title('Training Loss Curve')
+    plt.legend()
+    plt.tight_layout()
+    file_path = os.path.join(save_dir, f'loss.png')
+    plt.savefig(file_path, dpi=300)
+    plt.close()
 
 if __name__ == '__main__':
     train()

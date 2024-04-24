@@ -13,7 +13,7 @@ from data import Trail_ROOT, TrailAnnotationTransform, TrailDetection, BaseTrans
 from data import Trail_CLASSES as labelmap
 import torch.utils.data as data
 
-from ssd_fpns import build_ssd
+from ssd import build_ssd
 
 import sys
 import os
@@ -36,7 +36,7 @@ def str2bool(v):
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Evaluation')
 parser.add_argument('--trained_model',
-                    default='/home/zhaojiankuo/ssd.pytorch-master/weights/Trail_knots.pth', type=str,
+                    default='/home/zhaojiankuo/ssd.pytorch-master/weights/807.pth', type=str,
                     help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='/home/zhaojiankuo/ssd.pytorch-master/eval', type=str,
                     help='File path to save results')
@@ -177,6 +177,10 @@ def do_python_eval(output_dir='output', use_07=True):
         print('AP for {} = {:.4f}'.format(cls, ap))
         with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
             pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+    
+    print('Precision:', prec[100:1500:100])
+    print('Recall:', rec[100:1500:100])
+    
     print('Mean AP = {:.4f}'.format(np.mean(aps)))
     print('~~~~~~~~')
     print('Results:')
@@ -187,7 +191,6 @@ def do_python_eval(output_dir='output', use_07=True):
     print('')
     print('--------------------------------------------------------------')
     print('Results computed with the **unofficial** Python eval code.')
-    print('Results should be very close to the official MATLAB eval code.')
     print('--------------------------------------------------------------')
 
 
@@ -369,6 +372,7 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
     #    (x1, y1, x2, y2, score)
     all_boxes = [[[] for _ in range(num_images)]
                  for _ in range(len(labelmap)+1)]
+    test_time = []
 
     # timers
     _t = {'im_detect': Timer(), 'misc': Timer()}
@@ -403,12 +407,15 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
                                                                  copy=False)
             all_boxes[j][i] = cls_dets
 
+        test_time += [detect_time]
         print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
                                                     num_images, detect_time))
 
     with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
+    test_time = test_time[1:]
+    print('average test time:{:.3f}s'.format(sum(test_time) / len(test_time)))
     print('Evaluating detections')
     evaluate_detections(all_boxes, output_dir, dataset)
 

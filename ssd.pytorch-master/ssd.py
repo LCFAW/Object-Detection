@@ -29,7 +29,7 @@ class SSD(nn.Module):
         super(SSD, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        self.cfg = (coco, voc, Trail_knots)[num_classes == 2]
+        self.cfg = Trail_knots
         self.priorbox = PriorBox(self.cfg)
         with torch.no_grad():
             self.priors = Variable(self.priorbox.forward())
@@ -177,33 +177,34 @@ def multibox(vgg, extra_layers, cfg, num_classes):
                                  * 4, kernel_size=3, padding=1)]
         conf_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                   * num_classes, kernel_size=3, padding=1)]
-    print("loc_layers",loc_layers)
-    print("conf_layers",conf_layers)
+    #　print("loc_layers",loc_layers)
+    #  print("conf_layers",conf_layers)
     return vgg, extra_layers, (loc_layers, conf_layers)
 
 
 base = {
     '300': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
             512, 512, 512],
-    '512': [],
+    '512': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
+            512, 512, 512],
 }
 extras = {
     '300': [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256],
-    '512': [],
+    '512': [256, 'S', 512, 128, 'S', 256, 128, 'S', 256, 128, 'S', 256],
 }
 mbox = {
     '300': [4, 6, 6, 6, 4, 4],  # number of boxes per feature map location
-    '512': [],
+    '512': [4, 6, 6, 6, 4, 4],
 }
 
 
-def build_ssd(phase, size=300, num_classes=21):
+def build_ssd(phase, size=512, num_classes=2):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
-    if size != 300:
+    if size != 300 and size != 512:
         print("ERROR: You specified size " + repr(size) + ". However, " +
-              "currently only SSD300 (size=300) is supported!")
+              "currently only SSD300 and SSD512 are supported!")
         return
     base_, extras_, head_ = multibox(vgg(base[str(size)], 3),
                                      add_extras(extras[str(size)], 1024),

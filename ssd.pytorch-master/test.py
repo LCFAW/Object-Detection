@@ -17,7 +17,7 @@ from ssd_fpns import build_ssd
 import cv2
 
 parser = argparse.ArgumentParser(description='Single Shot MultiBox Detection')
-parser.add_argument('--trained_model', default='/home/zhaojiankuo/ssd.pytorch-master/weights/856.pth',
+parser.add_argument('--trained_model', default='/home/zhaojiankuo/ssd.pytorch-master/weights/875.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='/home/zhaojiankuo/ssd.pytorch-master/img_out/', type=str,
                     help='Dir to save results')
